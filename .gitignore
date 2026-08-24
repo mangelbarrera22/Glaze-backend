@@ -9,7 +9,7 @@ node_modules/
 .env
 
 # Archivos autogenerados de contratos y blockchain
-artifacts/
+
 cache/
 typechain/
 dist/
