@@ -2,30 +2,26 @@ const express = require("express");
 const router = express.Router();
 
 const soporteController = require("../controllers/soporteController");
+const auth = require("../middleware/auth");
 
+// ==========================================
+// 📨 ENVIAR MENSAJE DE SOPORTE
+// ==========================================
+router.post("/", auth, soporteController.enviarMensaje);
 
-// ==========================
-// ENVIAR MENSAJE DE SOPORTE
-// ==========================
-router.post("/", soporteController.enviarMensaje);
+// ==========================================
+// 📋 VER MENSAJES POR USUARIO
+// ==========================================
+router.get("/:id_usuario", auth, soporteController.obtenerMensajesUsuario);
 
+// ==========================================
+// 🛠️ VER TODOS LOS MENSAJES (ADMIN)
+// ==========================================
+router.get("/", auth, soporteController.obtenerTodos);
 
-// ==========================
-// (OPCIONAL) VER MENSAJES POR USUARIO
-// ==========================
-router.get("/:id_usuario", soporteController.obtenerMensajesUsuario);
-
-
-// ==========================
-// (OPCIONAL) VER TODOS (ADMIN)
-// ==========================
-router.get("/", soporteController.obtenerTodos);
-
-
-// ==========================
-// (OPCIONAL) ELIMINAR MENSAJE
-// ==========================
-router.delete("/:id", soporteController.eliminarMensaje);
-
+// ==========================================
+// ❌ ELIMINAR MENSAJE DE SOPORTE
+// ==========================================
+router.delete("/:id", auth, soporteController.eliminarMensaje);
 
 module.exports = router;

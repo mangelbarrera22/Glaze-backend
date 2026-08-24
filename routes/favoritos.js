@@ -1,14 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const favoritosController = require("../controllers/favoritosController");
+const auth = require("../middleware/auth"); // Importar middleware de autenticación
 
-// CAMBIO AQUÍ: Usa "/" en lugar de "/favoritos"
-router.post("/", favoritosController.agregarFavorito); 
-
-// CAMBIO AQUÍ: Usa "/:id_usuario" en lugar de "/favoritos/:id_usuario"
-router.get("/:id_usuario", favoritosController.verFavoritos);
-
-// CAMBIO AQUÍ: Usa "/:id" en lugar de "/eliminar/:id" (opcional)
-router.delete("/:id", favoritosController.eliminarFavorito);
+// Proteger todas las rutas de favoritos
+router.post("/", auth, favoritosController.agregarFavorito);
+router.get("/:id_usuario", auth, favoritosController.verFavoritos);
+router.delete("/:id_usuario/:id_producto", auth, favoritosController.eliminarFavorito);
 
 module.exports = router;

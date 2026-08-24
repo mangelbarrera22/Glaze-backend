@@ -5,35 +5,39 @@ const productosController = require("../controllers/productosController");
 const upload = require("../config/upload");
 const auth = require("../middleware/auth");
 
-// 🔍 Obtener todos
+// 🔍 OBTENER TODOS LOS PRODUCTOS
 router.get("/", productosController.getProductos);
 
-// ✅ Obtener productos de un vendedor específico
-router.get("/vendedor/:id_usuario", auth, productosController.getProductosPorVendedor);
+// ✅ OBTENER PRODUCTOS DE UN VENDEDOR ESPECÍFICO
+router.get(
+  "/vendedor/:id_usuario",
+  auth,
+  productosController.getProductosPorVendedor
+);
 
-// 🔍 Obtener uno
+// 🔍 OBTENER PRODUCTO POR ID
 router.get("/:id", productosController.getProductoById);
 
-// 🔥 CREAR
+// 🔥 CREAR PRODUCTO
 router.post(
   "/",
   auth,
   upload.fields([
     { name: "imagen", maxCount: 1 },
-    { name: "certificado", maxCount: 1 }
+    { name: "certificado", maxCount: 1 },
   ]),
   productosController.crearProducto
 );
 
-// ✏️ ACTUALIZAR (Corregido: Una sola declaración con middlewares)
+// ✏️ ACTUALIZAR PRODUCTO (Solo permite actualizar imagen, el certificado es inmutable)
 router.put(
   "/:id",
   auth,
-  upload.fields([{ name: "imagen", maxCount: 1 }]), 
+  upload.fields([{ name: "imagen", maxCount: 1 }]),
   productosController.actualizarProducto
 );
 
-// ❌ Eliminar
+// ❌ ELIMINAR PRODUCTO
 router.delete("/:id", auth, productosController.eliminarProducto);
 
 module.exports = router;

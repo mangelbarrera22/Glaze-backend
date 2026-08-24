@@ -1,0 +1,3 @@
+[submodule "glaze-contracts"]
+	path = glaze-contracts
+	url = https://github.com/mangelbarrera22/glaze-blockchain.git

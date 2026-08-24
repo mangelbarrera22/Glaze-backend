@@ -1,13 +1,16 @@
 const db = require("../config/db");
 
-exports.obtenerHistorial = (req, res) => {
-  // 1. Extraemos el ID que viene de la URL (ej: /api/historial/29)
+exports.obtenerHistorial = async (req, res) => {
+  // 1. Extraemos el ID que viene de la URL
   const { id_usuario } = req.params;
+
+  if (!id_usuario) {
+    return res.status(400).json({ mensaje: "Falta id_usuario" });
+  }
 
   console.log("🔍 Buscando adquisiciones para el usuario:", id_usuario);
 
-  // 2. Query ajustada exactamente a tu imagen
-  // Nota: Usamos v.id_comprador porque así se llama en tu tabla
+  // 2. Query ajustada
   const sql = `
     SELECT 
       v.id_venta,
@@ -24,17 +27,17 @@ exports.obtenerHistorial = (req, res) => {
     ORDER BY v.fecha_compra DESC
   `;
 
-  db.query(sql, [id_usuario], (err, results) => {
-    if (err) {
-      console.error("❌ Error SQL en Historial:", err);
-      // Enviamos el error para que el frontend deje de cargar y muestre el mensaje
-      return res.status(500).json({ mensaje: "Error interno del servidor" });
-    }
+  try {
+    const [results] = await db.promise().query(sql, [id_usuario]);
 
-    // 3. Log de confirmación en tu consola de Node
+    // 3. Log de confirmación
     console.log(`✅ Se encontraron ${results.length} piezas para el ID ${id_usuario}`);
 
-    // 4. Enviamos los resultados (si no hay, enviará [] y la app mostrará "Vacío")
-    res.json(results);
-  });
+    // 4. Enviamos los resultados
+    return res.json(results);
+
+  } catch (err) {
+    console.error("❌ Error SQL en Historial:", err);
+    return res.status(500).json({ mensaje: "Error interno del servidor" });
+  }
 };

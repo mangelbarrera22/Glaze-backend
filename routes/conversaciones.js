@@ -6,4 +6,4 @@ const authMiddleware = require("../middleware/auth");
 router.post("/", authMiddleware, mensajesController.crearConversacion);
 router.get("/", authMiddleware, mensajesController.verConversaciones);
 
-module.exports = router;    
+module.exports = router;        

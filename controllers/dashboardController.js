@@ -1,42 +1,45 @@
 const db = require("../config/db");
 
-const getEstadisticas = (req, res) => {
+/**
+ * Obtiene el resumen de compras y gasto total del usuario autenticado
+ */
+const getEstadisticas = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || req.user?.id_usuario;
 
-    // TOTAL COMPRAS
-    db.query(
-      "SELECT COUNT(*) AS totalCompras FROM ventas WHERE id_comprador = ?",
-      [userId],
-      (err, comprasResult) => {
-        if (err) {
-          console.log("Error compras:", err);
-          return res.status(500).json(err);
-        }
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        error: "Usuario no autenticado o token inválido"
+      });
+    }
 
-        // GASTO TOTAL
-        db.query(
-          "SELECT SUM(valor_compra) AS gastoTotal FROM ventas WHERE id_comprador = ?",
-          [userId],
-          (err2, gastoResult) => {
-            if (err2) {
-              console.log("Error gasto:", err2);
-              return res.status(500).json(err2);
-            }
+    // Consulta unificada para obtener total de compras y gasto total en un solo llamado
+    const sql = `
+      SELECT 
+        COUNT(*) AS totalCompras,
+        COALESCE(SUM(valor_compra), 0) AS gastoTotal
+      FROM ventas 
+      WHERE id_comprador = ?
+    `;
 
-            res.json({
-              totalCompras: comprasResult[0].totalCompras || 0,
-              gastoTotal: gastoResult[0].gastoTotal || 0
-            });
-          }
-        );
-      }
-    );
+    const [rows] = await db.promise().query(sql, [userId]);
+
+    return res.json({
+      ok: true,
+      totalCompras: Number(rows[0].totalCompras) || 0,
+      gastoTotal: Number(rows[0].gastoTotal) || 0
+    });
 
   } catch (error) {
-    console.log("ERROR DASHBOARD:", error);
-    res.status(500).json({ error: "Error interno" });
+    console.error("❌ ERROR DASHBOARD:", error);
+    return res.status(500).json({ 
+      ok: false, 
+      error: "Error interno del servidor al procesar las estadísticas" 
+    });
   }
 };
 
-module.exports = { getEstadisticas };
+module.exports = { 
+  getEstadisticas 
+};

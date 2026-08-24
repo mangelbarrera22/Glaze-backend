@@ -1,13 +1,16 @@
 const { Router } = require("express");
 const router = Router();
 const { getEstadisticasVendedor, getMisProductos } = require("../controllers/vendedoresController");
+const authMiddleware = require("../middleware/auth");
 
+// ==========================================
+// 💎 GESTIÓN DE VENDEDORES GLAZE
+// ==========================================
 
-// ✅ POR ESTO (Usando tu middleware de auth actual):
-const auth = require("../middleware/auth"); 
+// 📊 Estadísticas de ventas e ingresos del vendedor
+router.get("/stats", authMiddleware, getEstadisticasVendedor);
 
-// Y aplica el middleware a las rutas así:
-router.get("/stats", auth, getEstadisticasVendedor);
-router.get("/inventario", auth, getMisProductos);
+// 💎 Inventario de productos asignados al vendedor
+router.get("/inventario", authMiddleware, getMisProductos);
 
 module.exports = router;

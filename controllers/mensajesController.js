@@ -1,166 +1,393 @@
 const db = require("../config/db");
 
 // =============================
-// CREAR O RETORNAR CONVERSACION
+// CREAR O RETORNAR CONVERSACIÓN
 // =============================
 exports.crearConversacion = (req, res) => {
-  const { id_vendedor } = req.body;
-  const id_comprador = req.user.id_usuario;
+  const { usuario2_id } = req.body;
+  const usuario1_id = req.user.id_usuario;
 
-  if (!id_vendedor) {
-    return res.status(400).json({ error: "id_vendedor es requerido" });
+  if (!usuario2_id) {
+    return res.status(400).json({
+      error: "usuario2_id es requerido"
+    });
   }
 
-  if (id_comprador === parseInt(id_vendedor)) {
-    return res.status(400).json({ error: "No puedes crear una conversación contigo mismo" });
+  if (usuario1_id === parseInt(usuario2_id)) {
+    return res.status(400).json({
+      error: "No puedes crear una conversación contigo mismo"
+    });
   }
 
-  // Verificar si ya existe conversación entre estos dos usuarios
   const checkSql = `
-    SELECT id_conversacion FROM conversaciones
-    WHERE id_comprador = ? AND id_vendedor = ?
+    SELECT id_conversacion
+    FROM conversaciones
+    WHERE
+      (usuario1_id = ? AND usuario2_id = ?)
+      OR
+      (usuario1_id = ? AND usuario2_id = ?)
   `;
 
-  db.query(checkSql, [id_comprador, id_vendedor], (err, rows) => {
-    if (err) return res.status(500).json({ error: "Error interno" });
+  db.query(
+    checkSql,
+    [
+      usuario1_id,
+      usuario2_id,
+      usuario2_id,
+      usuario1_id
+    ],
+    (err, rows) => {
 
-    // Si ya existe, retornarla
-    if (rows.length > 0) {
-      return res.json({
-        mensaje: "Conversación existente",
-        id_conversacion: rows[0].id_conversacion,
-        nueva: false
-      });
+      if (err) {
+        console.log("Error verificando conversación:", err);
+        return res.status(500).json({
+          error: "Error interno"
+        });
+      }
+
+      if (rows.length > 0) {
+        return res.json({
+          mensaje: "Conversación existente",
+          id_conversacion: rows[0].id_conversacion,
+          nueva: false
+        });
+      }
+
+      const insertSql = `
+        INSERT INTO conversaciones
+        (usuario1_id, usuario2_id, fecha_inicio, estado)
+        VALUES (?, ?, NOW(), 'activa')
+      `;
+
+      db.query(
+        insertSql,
+        [usuario1_id, usuario2_id],
+        (insertErr, result) => {
+
+          if (insertErr) {
+            console.log("Error creando conversación:", insertErr);
+
+            return res.status(500).json({
+              error: "Error interno"
+            });
+          }
+
+          res.status(201).json({
+            mensaje: "Conversación creada",
+            id_conversacion: result.insertId,
+            nueva: true
+          });
+        }
+      );
     }
-
-    // Si no existe, crearla
-    const insertSql = `
-      INSERT INTO conversaciones (id_comprador, id_vendedor, fecha_inicio, estado)
-      VALUES (?, ?, NOW(), 'activa')
-    `;
-
-    db.query(insertSql, [id_comprador, id_vendedor], (insertErr, result) => {
-      if (insertErr) return res.status(500).json({ error: "Error interno" });
-
-      res.status(201).json({
-        mensaje: "Conversación creada",
-        id_conversacion: result.insertId,
-        nueva: true
-      });
-    });
-  });
+  );
 };
+
 
 // =============================
 // VER CONVERSACIONES
 // =============================
 exports.verConversaciones = (req, res) => {
+
   const id_usuario = req.user.id_usuario;
 
   const sql = `
-    SELECT 
+    SELECT
       c.id_conversacion,
-      c.estado,
+      c.usuario1_id,
+      c.usuario2_id,
       c.fecha_inicio,
-      CONCAT(comp.primer_nombre, ' ', comp.primer_apellido) AS nombre_comprador,
-      CONCAT(vend.primer_nombre, ' ', vend.primer_apellido) AS nombre_vendedor,
-      comp.id_usuario AS id_comprador,
-      vend.id_usuario AS id_vendedor,
+      c.estado,
+
+      CONCAT(
+        u1.primer_nombre,
+        ' ',
+        u1.primer_apellido
+      ) AS nombre_usuario1,
+
+      CONCAT(
+        u2.primer_nombre,
+        ' ',
+        u2.primer_apellido
+      ) AS nombre_usuario2,
+
       (
-        SELECT contenido_mensaje 
-        FROM mensajes m 
-        WHERE m.id_conversacion = c.id_conversacion 
-        ORDER BY fecha_hora DESC LIMIT 1
+        SELECT m.contenido_mensaje
+        FROM mensajes m
+        WHERE m.id_conversacion = c.id_conversacion
+        ORDER BY m.fecha_hora DESC
+        LIMIT 1
       ) AS ultimo_mensaje,
+
       (
-        SELECT fecha_hora 
-        FROM mensajes m 
-        WHERE m.id_conversacion = c.id_conversacion 
-        ORDER BY fecha_hora DESC LIMIT 1
+        SELECT m.fecha_hora
+        FROM mensajes m
+        WHERE m.id_conversacion = c.id_conversacion
+        ORDER BY m.fecha_hora DESC
+        LIMIT 1
       ) AS fecha_ultimo_mensaje
+
     FROM conversaciones c
-    JOIN usuarios comp ON c.id_comprador = comp.id_usuario
-    JOIN usuarios vend ON c.id_vendedor = vend.id_usuario
-    WHERE c.id_comprador = ? OR c.id_vendedor = ?
+
+    JOIN usuarios u1
+      ON c.usuario1_id = u1.id_usuario
+
+    JOIN usuarios u2
+      ON c.usuario2_id = u2.id_usuario
+
+    WHERE
+      c.usuario1_id = ?
+      OR
+      c.usuario2_id = ?
+
     ORDER BY fecha_ultimo_mensaje DESC
   `;
 
-  db.query(sql, [id_usuario, id_usuario], (err, result) => {
-    if (err) return res.status(500).json({ error: "Error interno" });
-    res.json(result);
-  });
+  db.query(
+    sql,
+    [
+      id_usuario,
+      id_usuario
+    ],
+    (err, result) => {
+
+      if (err) {
+        console.log(
+          "❌ Error obteniendo conversaciones:",
+          err
+        );
+
+        return res.status(500).json({
+          error: "Error interno"
+        });
+      }
+
+      res.json(result);
+    }
+  );
 };
+
 
 // =============================
 // ENVIAR MENSAJE
 // =============================
 exports.enviarMensaje = (req, res) => {
-  const { id_conversacion, contenido_mensaje } = req.body;
-  const emisor_id = req.user.id_usuario; // ← del token, no del body
 
-  if (!id_conversacion || !contenido_mensaje?.trim()) {
-    return res.status(400).json({ error: "id_conversacion y contenido_mensaje son requeridos" });
+  const {
+    id_conversacion,
+    contenido_mensaje
+  } = req.body;
+
+  const emisor_id = req.user.id_usuario;
+
+  if (
+    !id_conversacion ||
+    !contenido_mensaje?.trim()
+  ) {
+    return res.status(400).json({
+      error: "id_conversacion y contenido_mensaje son requeridos"
+    });
   }
 
-  // Verificar que el emisor pertenece a la conversación
+  // =============================
+  // VERIFICAR ACCESO
+  // =============================
+
   const checkSql = `
-    SELECT id_conversacion FROM conversaciones
-    WHERE id_conversacion = ? AND (id_comprador = ? OR id_vendedor = ?)
+    SELECT id_conversacion
+    FROM conversaciones
+    WHERE
+      id_conversacion = ?
+      AND (
+        usuario1_id = ?
+        OR
+        usuario2_id = ?
+      )
   `;
 
-  db.query(checkSql, [id_conversacion, emisor_id, emisor_id], (checkErr, rows) => {
-    if (checkErr) return res.status(500).json({ error: "Error interno" });
-    if (rows.length === 0) return res.status(403).json({ error: "No tienes acceso a esta conversación" });
+  db.query(
+    checkSql,
+    [
+      id_conversacion,
+      emisor_id,
+      emisor_id
+    ],
+    (checkErr, rows) => {
 
-    const insertSql = `
-      INSERT INTO mensajes (id_conversacion, emisor_id, contenido_mensaje, fecha_hora)
-      VALUES (?, ?, ?, NOW())
-    `;
+      if (checkErr) {
 
-    db.query(insertSql, [id_conversacion, emisor_id, contenido_mensaje.trim()], (err, result) => {
-      if (err) return res.status(500).json({ error: "Error interno" });
+        console.log(
+          "❌ Error verificando conversación:",
+          checkErr
+        );
 
-      res.status(201).json({
-        mensaje: "Mensaje enviado",
-        id_mensaje: result.insertId
-      });
-    });
-  });
+        return res.status(500).json({
+          error: "Error interno"
+        });
+      }
+
+      if (rows.length === 0) {
+        return res.status(403).json({
+          error: "No tienes acceso a esta conversación"
+        });
+      }
+
+      // =============================
+      // INSERTAR MENSAJE
+      // =============================
+
+      const insertSql = `
+        INSERT INTO mensajes
+        (
+          id_conversacion,
+          emisor_id,
+          contenido_mensaje,
+          fecha_hora
+        )
+        VALUES (?, ?, ?, NOW())
+      `;
+
+      db.query(
+        insertSql,
+        [
+          id_conversacion,
+          emisor_id,
+          contenido_mensaje.trim()
+        ],
+        (err, result) => {
+
+          if (err) {
+
+            console.log(
+              "❌ Error enviando mensaje:",
+              err
+            );
+
+            return res.status(500).json({
+              error: "Error interno"
+            });
+          }
+
+          res.status(201).json({
+            mensaje: "Mensaje enviado",
+            id_mensaje: result.insertId
+          });
+        }
+      );
+    }
+  );
 };
+
 
 // =============================
 // VER MENSAJES
 // =============================
 exports.verMensajes = (req, res) => {
-  const { id_conversacion } = req.params;
-  const id_usuario = req.user.id_usuario;
 
-  // Verificar que el usuario pertenece a la conversación
+  const { id_conversacion } = req.params;
+
+  const id_usuario = req.user?.id_usuario;
+
+  if (!id_usuario) {
+    return res.status(401).json({
+      error: "Usuario no autenticado"
+    });
+  }
+
+  // =============================
+  // VERIFICAR ACCESO
+  // =============================
+
   const checkSql = `
-    SELECT id_conversacion FROM conversaciones
-    WHERE id_conversacion = ? AND (id_comprador = ? OR id_vendedor = ?)
+    SELECT id_conversacion
+    FROM conversaciones
+    WHERE
+      id_conversacion = ?
+      AND (
+        usuario1_id = ?
+        OR
+        usuario2_id = ?
+      )
   `;
 
-  db.query(checkSql, [id_conversacion, id_usuario, id_usuario], (checkErr, rows) => {
-    if (checkErr) return res.status(500).json({ error: "Error interno" });
-    if (rows.length === 0) return res.status(403).json({ error: "No tienes acceso a esta conversación" });
+  db.query(
+    checkSql,
+    [
+      id_conversacion,
+      id_usuario,
+      id_usuario
+    ],
+    (checkErr, rows) => {
 
-    const sql = `
-      SELECT 
-        m.id_mensaje,
-        m.contenido_mensaje,
-        m.fecha_hora,
-        m.emisor_id,
-        CONCAT(u.primer_nombre, ' ', u.primer_apellido) AS nombre_emisor
-      FROM mensajes m
-      JOIN usuarios u ON m.emisor_id = u.id_usuario
-      WHERE m.id_conversacion = ?
-      ORDER BY m.fecha_hora ASC
-    `;
+      if (checkErr) {
 
-    db.query(sql, [id_conversacion], (err, result) => {
-      if (err) return res.status(500).json({ error: "Error interno" });
-      res.json(result);
-    });
-  });
+        console.log(
+          "❌ Error verificando conversación:",
+          checkErr
+        );
+
+        return res.status(500).json({
+          error: "Error interno"
+        });
+      }
+
+      if (rows.length === 0) {
+
+        return res.status(403).json({
+          error: "No tienes acceso a esta conversación"
+        });
+      }
+
+      // =============================
+      // OBTENER MENSAJES
+      // =============================
+
+      const sql = `
+        SELECT
+          m.id_mensaje,
+          m.id_conversacion,
+          m.emisor_id,
+          m.contenido_mensaje,
+          m.fecha_hora,
+
+          CONCAT(
+            u.primer_nombre,
+            ' ',
+            u.primer_apellido
+          ) AS nombre_emisor
+
+        FROM mensajes m
+
+        JOIN usuarios u
+          ON m.emisor_id = u.id_usuario
+
+        WHERE
+          m.id_conversacion = ?
+
+        ORDER BY
+          m.fecha_hora ASC
+      `;
+
+      db.query(
+        sql,
+        [id_conversacion],
+        (err, result) => {
+
+          if (err) {
+
+            console.log(
+              "❌ Error obteniendo mensajes:",
+              err
+            );
+
+            return res.status(500).json({
+              error: "Error interno"
+            });
+          }
+
+          res.json(result);
+        }
+      );
+    }
+  );
 };

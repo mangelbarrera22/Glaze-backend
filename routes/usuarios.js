@@ -1,39 +1,28 @@
 const express = require("express");
 const router = express.Router();
 const usuarioController = require("../controllers/usuarioController");
+const authMiddleware = require("../middleware/auth");
 const db = require("../config/db");
 
 // ==========================================
-// RUTAS DE PERFIL GLAZE (Sincronizadas)
+// 👤 PERFIL Y CREDENCIALES GLAZE
 // ==========================================
 
-/**
- * GET /api/usuarios/:id
- * Trae la información del socio, incluyendo el nombre completo concatenado.
- * El frontend debe llamar a: /api/usuarios/${user.id_usuario}
- */
-router.get("/:id", usuarioController.obtenerUsuario);
+// 🔍 Obtener información del usuario
+router.get("/:id", authMiddleware, usuarioController.obtenerUsuario);
 
-/**
- * PUT /api/usuarios/actualizar/:id
- * Actualiza correo, celular y dirección.
- * El frontend debe llamar a: /api/usuarios/actualizar/${user.id_usuario}
- */
-router.put("/actualizar/:id", usuarioController.actualizarUsuario);
+// ✏️ Actualizar datos personales (correo, celular, dirección)
+router.put("/actualizar/:id", authMiddleware, usuarioController.actualizarUsuario);
 
-/**
- * PUT /api/usuarios/password/:id
- * Cambio de credenciales con validación Bcrypt.
- */
-router.put("/password/:id", usuarioController.cambiarPassword);
+// 🔑 Cambio de contraseña con Bcrypt
+router.put("/password/:id", authMiddleware, usuarioController.cambiarPassword);
 
 // ==========================================
-// ESTADÍSTICAS (Bóveda de Inversión)
+// 📊 ESTADÍSTICAS (Bóveda de Inversión)
 // ==========================================
-router.get("/estadisticas/:id", (req, res) => {
+router.get("/estadisticas/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
-  
-  // Consulta optimizada para la estética de "Inversión Heritage"
+
   const sql = `
     SELECT 
       COUNT(*) as total_piezas, 

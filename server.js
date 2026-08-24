@@ -1,3 +1,17 @@
+/**
+ * ==========================================================
+ * Archivo: server.js
+ * Proyecto: Emerald Trade / Glaze
+ * Módulo: Servidor Backend
+ *
+ * Descripción:
+ * Configuración principal del servidor Express.
+ * Inicializa middlewares globales, carga las rutas de la API
+ * y levanta el servidor utilizando la configuración definida
+ * en las variables de entorno.
+ * ==========================================================
+ */
+
 require("dotenv").config();
 
 const express = require("express");
@@ -6,13 +20,25 @@ const os = require("os");
 
 const app = express();
 
-// ==========================
-// OBTENER IP AUTOMÁTICA
-// ==========================
+
+// ======================================================
+// CONFIGURACIÓN DE RED
+// ======================================================
+
+/**
+ * Obtiene automáticamente la dirección IP local del equipo.
+ *
+ * Recorre las interfaces de red disponibles y devuelve la
+ * primera dirección IPv4 encontrada que no corresponda a una
+ * interfaz interna.
+ *
+ * @returns {string} Dirección IP local del dispositivo.
+ */
 function getIP() {
   const interfaces = os.networkInterfaces();
-  for (let name in interfaces) {
-    for (let iface of interfaces[name]) {
+
+  for (const name in interfaces) {
+    for (const iface of interfaces[name]) {
       if (iface.family === "IPv4" && !iface.internal) {
         return iface.address;
       }
@@ -20,43 +46,71 @@ function getIP() {
   }
 }
 
+
+// ======================================================
+// VARIABLES DEL SERVIDOR
+// ======================================================
+
 const LOCAL_IP = getIP();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 const BASE_URL = process.env.BASE_URL || `http://${LOCAL_IP}:${PORT}`;
 
-// ==========================
+
+// ======================================================
 // MIDDLEWARES GLOBALES
-// ==========================
+// ======================================================
+// Configuración base de Express para recibir peticiones,
+// manejar JSON, formularios y archivos públicos.
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
-// ==========================
-// IMPORTAR RUTAS
-// ==========================
+
+// ======================================================
+// IMPORTACIÓN DE RUTAS
+// ======================================================
+// Cada módulo representa una sección de la API.
+
+// Autenticación
 const authRoutes = require("./routes/auth");
-const productosRoutes = require("./routes/productos");
-const ventasRoutes = require("./routes/ventas");
-const historialRoutes = require("./routes/historial");
-const comprasRoutes = require("./routes/compras");
-const mensajesRoutes = require("./routes/mensajes");
-const favoritosRoutes = require("./routes/favoritos");
-const comprarRoutes = require("./routes/comprar");
-const usuarioRoutes = require("./routes/usuarios");
-const soporteRoutes = require("./routes/soporte");
-const dashboardRoutes = require("./routes/dashboard");
-const vendedoresRoutes = require("./routes/vendedores");
-const pagosRoutes = require("./routes/pagos");
-const conversacionesRoutes = require("./routes/conversaciones");
+
+// Blockchain
 const blockchainRoutes = require("./routes/blockchain");
 
-// ==========================
-// USAR RUTAS
-// ==========================
+// Compras
+const comprasRoutes = require("./routes/compras");
+const comprarRoutes = require("./routes/comprar");
 
-// 🔐 Auth
+// Comunicación
+const conversacionesRoutes = require("./routes/conversaciones");
+const mensajesRoutes = require("./routes/mensajes");
+
+// Gestión del sistema
+const dashboardRoutes = require("./routes/dashboard");
+const soporteRoutes = require("./routes/soporte");
+
+// Productos y usuarios
+const productosRoutes = require("./routes/productos");
+const usuarioRoutes = require("./routes/usuarios");
+const vendedoresRoutes = require("./routes/vendedores");
+
+// Favoritos e historial
+const favoritosRoutes = require("./routes/favoritos");
+const historialRoutes = require("./routes/historial");
+
+// Pagos y ventas
+const pagosRoutes = require("./routes/pagos");
+const ventasRoutes = require("./routes/ventas");
+
+
+// ======================================================
+// REGISTRO DE RUTAS API
+// ======================================================
+
+// 🔐 Autenticación
 app.use("/api/auth", authRoutes);
 
 // 📦 Productos
@@ -71,16 +125,19 @@ app.use("/api/historial", historialRoutes);
 // 🛒 Compras
 app.use("/api/compras", comprasRoutes);
 
-// 💬 Mensajes
-app.use("/api/mensajes", mensajesRoutes);
+// 🧾 Compra de productos
+app.use("/api/comprar", comprarRoutes);
 
 // ⭐ Favoritos
 app.use("/api/favoritos", favoritosRoutes);
 
-// 🧾 Comprar
-app.use("/api/comprar", comprarRoutes);
+// 💬 Mensajes
+app.use("/api/mensajes", mensajesRoutes);
 
-// 👤 Usuario
+// 💬 Conversaciones
+app.use("/api/conversaciones", conversacionesRoutes);
+
+// 👤 Usuarios
 app.use("/api/usuarios", usuarioRoutes);
 
 // 🏪 Vendedores
@@ -92,25 +149,26 @@ app.use("/api/soporte", soporteRoutes);
 // 📊 Dashboard
 app.use("/api/dashboard", dashboardRoutes);
 
-// 💳 Pagos Wompi
+// 💳 Pagos
 app.use("/api/pagos", pagosRoutes);
-
-// 💬 Conversaciones
-app.use("/api/conversaciones", conversacionesRoutes);
 
 // ⛓️ Blockchain
 app.use("/api/blockchain", blockchainRoutes);
 
-// ==========================
-// RUTA DE PRUEBA
-// ==========================
+
+// ======================================================
+// RUTA PRINCIPAL DE VERIFICACIÓN
+// ======================================================
+
 app.get("/", (req, res) => {
   res.send("API Emerald Trade funcionando 🚀");
 });
 
-// ==========================
-// INICIAR SERVIDOR
-// ==========================
+
+// ======================================================
+// INICIALIZACIÓN DEL SERVIDOR
+// ======================================================
+
 app.listen(PORT, HOST, () => {
   console.log("====================================");
   console.log("🚀 Servidor corriendo");
