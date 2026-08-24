@@ -15,7 +15,7 @@ const db = mysql.createPool({
 
 db.getConnection((err, connection) => {
   if (err) {
-    console.error("❌ Error al conectar a Railway:", err.message);
+    console.error("❌ Error al conectar a Railway", err.message);
     return;
   }
   console.log("✅ ¡Conexión exitosa a la base de datos de Glaze en Railway!");
