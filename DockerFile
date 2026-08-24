@@ -5,13 +5,12 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copiar todo el código (incluyendo la configuración de git)
-COPY . .
+# Clonar el repositorio principal junto con sus submódulos de forma explícita
+# (Reemplaza la URL con la de tu repositorio de backend si es necesario, o usa el clonado recursivo)
+RUN git clone --recurse-submodules https://github.com/mangelbarrera22/Glaze-backend.git .
 
-# Inicializar y actualizar los submódulos explícitamente en el build
-RUN git submodule update --init --recursive || true
-
-# Instalar las dependencias del backend
+# Copiar dependencias e instalarlas
+COPY package*.json ./
 RUN npm install
 
 EXPOSE 3000
