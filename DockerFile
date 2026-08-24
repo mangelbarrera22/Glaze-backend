@@ -1,17 +1,17 @@
 FROM node:18-alpine
 
-# Instalar git para poder clonar los submódulos
+# Instalar git
 RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Clonar el repositorio principal junto con sus submódulos de forma explícita
-# (Reemplaza la URL con la de tu repositorio de backend si es necesario, o usa el clonado recursivo)
-RUN git clone --recurse-submodules https://github.com/mangelbarrera22/Glaze-backend.git .
-
-# Copiar dependencias e instalarlas
+# Copiar primero los archivos del backend
 COPY package*.json ./
 RUN npm install
+COPY . .
+
+# Clonar directamente el repositorio de los contratos en la ruta exacta que busca tu código
+RUN git clone https://github.com/mangelbarrera22/glaze-blockchain.git ../glaze-contracts
 
 EXPOSE 3000
 CMD ["node", "server.js"]
