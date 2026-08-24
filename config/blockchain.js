@@ -6,8 +6,8 @@
 const { ethers } = require("ethers");
 
 // Carga de ABIs (Application Binary Interface) de los contratos inteligentes
-const EmeraldCertificateABI = require("../../glaze-contracts/artifacts/contracts/EmeraldCertificate.sol/EmeraldCertificate.json").abi;
-const GlazeMarketABI = require("../../glaze-contracts/artifacts/contracts/GlazeMarket.sol/GlazeMarket.json").abi;
+const EmeraldCertificateABI = require("../glaze-contracts/artifacts/contracts/EmeraldCertificate.sol/EmeraldCertificate.json").abi;
+const GlazeMarketABI = require("../glaze-contracts/artifacts/contracts/GlazeMarket.sol/GlazeMarket.json").abi;
 
 /**
  * Proveedor de conexión RPC a la red blockchain.
