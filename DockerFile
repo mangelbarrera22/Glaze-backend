@@ -1,0 +1,20 @@
+FROM node:18-alpine
+
+# Instalar git para poder clonar submódulos si fuera necesario, 
+# o mejor aún, asegurarnos de que el entorno tenga las herramientas básicas
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+# Copiar archivos de dependencias
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar el resto del código y asegurar que los submódulos se sincronicen
+COPY . .
+RUN git submodule update --init --recursive || true
+
+EXPOSE 3000
+CMD ["node", "server.js"]
