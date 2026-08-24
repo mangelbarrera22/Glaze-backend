@@ -7,10 +7,3 @@ node_modules/
 
 # Variables de entorno
 .env
-
-# Archivos autogenerados de contratos y blockchain
-
-cache/
-typechain/
-dist/
-coverage/
