@@ -2,3 +2,15 @@ node_modules/
 .env
 glaze-contracts
 uploads/
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+
+# Archivos autogenerados de contratos y blockchain
+artifacts/
+cache/
+typechain/
+dist/
+coverage/
