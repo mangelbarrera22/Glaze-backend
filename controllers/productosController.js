@@ -1,4 +1,6 @@
 const db = require("../config/db");
+const cloudinary = require("../services/cloudinary");
+const streamifier = require("streamifier");
 
 // Helper para promisificar consultas a la base de datos
 const queryAsync = (sql, params) => {
@@ -7,6 +9,23 @@ const queryAsync = (sql, params) => {
       if (err) return reject(err);
       resolve(results);
     });
+  });
+};
+
+// Helper para subir buffer a Cloudinary usando Streams
+const subirACloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    let stream = cloudinary.uploader.upload_stream(
+      { folder: "glaze-productos" },
+      (error, result) => {
+        if (result) {
+          resolve(result);
+        } else {
+          reject(error);
+        }
+      }
+    );
+    streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
 
@@ -76,12 +95,19 @@ const crearProducto = async (req, res) => {
     } = req.body;
 
     const id_vendedor = req.user.id || req.user.id_usuario;
-    let imagen = null;
-    let certificado = null;
+    let imagenUrl = null;
+    let certificadoUrl = null;
 
+    // Procesar imagen principal en Cloudinary si viene en la petición
     if (req.files) {
-      if (req.files.imagen) imagen = req.files.imagen[0].filename;
-      if (req.files.certificado) certificado = req.files.certificado[0].filename;
+      if (req.files.imagen && req.files.imagen[0]) {
+        const resultadoImg = await subirACloudinary(req.files.imagen[0].buffer);
+        imagenUrl = resultadoImg.secure_url;
+      }
+      if (req.files.certificado && req.files.certificado[0]) {
+        const resultadoCert = await subirACloudinary(req.files.certificado[0].buffer);
+        certificadoUrl = resultadoCert.secure_url;
+      }
     }
 
     await queryAsync("START TRANSACTION");
@@ -98,8 +124,8 @@ const crearProducto = async (req, res) => {
       peso,
       tratamiento,
       valor,
-      imagen,
-      certificado,
+      imagenUrl,
+      certificadoUrl,
       stock || 1,
       id_vendedor
     ]);
@@ -120,6 +146,7 @@ const crearProducto = async (req, res) => {
     await queryAsync("COMMIT");
 
     res.status(201).json({
+      ok: true,
       mensaje: tipo_producto === "joya" ? "Joya creada correctamente 🔥" : "Producto creado correctamente 🔥",
       id_producto
     });
@@ -152,12 +179,18 @@ const actualizarProducto = async (req, res) => {
 
     const tipo_actual = prodExistente[0].tipo_producto;
 
-    let imagen = null;
-    let certificado = null;
+    let imagenUrl = null;
+    let certificadoUrl = null;
 
     if (req.files) {
-      if (req.files.imagen) imagen = req.files.imagen[0].filename;
-      if (req.files.certificado) certificado = req.files.certificado[0].filename;
+      if (req.files.imagen && req.files.imagen[0]) {
+        const resultadoImg = await subirACloudinary(req.files.imagen[0].buffer);
+        imagenUrl = resultadoImg.secure_url;
+      }
+      if (req.files.certificado && req.files.certificado[0]) {
+        const resultadoCert = await subirACloudinary(req.files.certificado[0].buffer);
+        certificadoUrl = resultadoCert.secure_url;
+      }
     }
 
     // 2. Construcción dinámica de campos para evitar sobrescribir con UNDEFINED
@@ -169,8 +202,8 @@ const actualizarProducto = async (req, res) => {
     if (body.tratamiento !== undefined) { campos.push("tratamiento = ?"); params.push(body.tratamiento); }
     if (body.valor !== undefined) { campos.push("valor = ?"); params.push(body.valor); }
     if (body.stock !== undefined) { campos.push("stock = ?"); params.push(body.stock); }
-    if (imagen) { campos.push("imagen = ?"); params.push(imagen); }
-    if (certificado) { campos.push("certificado = ?"); params.push(certificado); }
+    if (imagenUrl) { campos.push("imagen = ?"); params.push(imagenUrl); }
+    if (certificadoUrl) { campos.push("certificado = ?"); params.push(certificadoUrl); }
 
     await queryAsync("START TRANSACTION");
 
@@ -198,7 +231,7 @@ const actualizarProducto = async (req, res) => {
 
     await queryAsync("COMMIT");
 
-    res.json({ mensaje: "Producto actualizado correctamente 💎" });
+    res.json({ ok: true, mensaje: "Producto actualizado correctamente 💎" });
   } catch (err) {
     await queryAsync("ROLLBACK");
     console.error("ERROR SQL UPDATE:", err);
