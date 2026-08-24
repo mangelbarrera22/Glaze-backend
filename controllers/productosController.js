@@ -81,6 +81,11 @@ const getProductoById = async (req, res) => {
 // ==========================
 const crearProducto = async (req, res) => {
   try {
+    console.log("====================================");
+    console.log("📦 REQ.BODY RECIBIDO:", req.body);
+    console.log("📂 REQ.FILES RECIBIDO:", req.files);
+    console.log("📄 REQ.FILE RECIBIDO:", req.file);
+    console.log("====================================")
     const {
       tipo_producto,
       color,
