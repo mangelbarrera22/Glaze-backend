@@ -61,12 +61,11 @@ const BASE_URL = process.env.BASE_URL || `http://${LOCAL_IP}:${PORT}`;
 // MIDDLEWARES GLOBALES
 // ======================================================
 // Configuración base de Express para recibir peticiones,
-// manejar JSON, formularios y archivos públicos.
+// manejar JSON y formularios.
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("uploads"));
 
 
 // ======================================================
