@@ -1,6 +1,4 @@
 const db = require("../config/db");
-const cloudinary = require("../services/cloudinary");
-const streamifier = require("streamifier");
 
 // Helper para promisificar consultas a la base de datos
 const queryAsync = (sql, params) => {
@@ -9,23 +7,6 @@ const queryAsync = (sql, params) => {
       if (err) return reject(err);
       resolve(results);
     });
-  });
-};
-
-// Helper para subir buffer a Cloudinary usando Streams
-const subirACloudinary = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    let stream = cloudinary.uploader.upload_stream(
-      { folder: "glaze-productos" },
-      (error, result) => {
-        if (result) {
-          resolve(result);
-        } else {
-          reject(error);
-        }
-      }
-    );
-    streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
 
@@ -77,15 +58,14 @@ const getProductoById = async (req, res) => {
 };
 
 // ==========================
-// ➕ CREAR PRODUCTO
+// ➕ CREAR PRODUCTO (Recibe URLs directas desde la App)
 // ==========================
 const crearProducto = async (req, res) => {
   try {
     console.log("====================================");
-    console.log("📦 REQ.BODY RECIBIDO:", req.body);
-    console.log("📂 REQ.FILES RECIBIDO:", req.files);
-    console.log("📄 REQ.FILE RECIBIDO:", req.file);
-    console.log("====================================")
+    console.log("📦 JSON REQ.BODY RECIBIDO:", req.body);
+    console.log("====================================");
+
     const {
       tipo_producto,
       color,
@@ -93,34 +73,23 @@ const crearProducto = async (req, res) => {
       valor,
       tratamiento,
       stock,
+      imagen,      // URL de Cloudinary enviada como texto
+      certificado, // URL del certificado enviada como texto (opcional)
       tiene_esmeralda,
       oro,
       oro_rosado,
-      plata
+      plata,
+      fecha_ingreso
     } = req.body;
 
     const id_vendedor = req.user.id || req.user.id_usuario;
-    let imagenUrl = null;
-    let certificadoUrl = null;
-
-    // Procesar imagen principal en Cloudinary si viene en la petición
-    if (req.files) {
-      if (req.files.imagen && req.files.imagen[0]) {
-        const resultadoImg = await subirACloudinary(req.files.imagen[0].buffer);
-        imagenUrl = resultadoImg.secure_url;
-      }
-      if (req.files.certificado && req.files.certificado[0]) {
-        const resultadoCert = await subirACloudinary(req.files.certificado[0].buffer);
-        certificadoUrl = resultadoCert.secure_url;
-      }
-    }
 
     await queryAsync("START TRANSACTION");
 
     const sqlProducto = `
       INSERT INTO productos 
-        (tipo_producto, color, peso, tratamiento, valor, imagen, certificado, stock, id_vendedor)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (tipo_producto, color, peso, tratamiento, valor, imagen, certificado, stock, id_vendedor, fecha_ingreso)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = await queryAsync(sqlProducto, [
@@ -129,10 +98,11 @@ const crearProducto = async (req, res) => {
       peso,
       tratamiento,
       valor,
-      imagenUrl,
-      certificadoUrl,
+      imagen || null,
+      certificado || null,
       stock || 1,
-      id_vendedor
+      id_vendedor,
+      fecha_ingreso || new Date()
     ]);
 
     const id_producto = result.insertId;
@@ -171,7 +141,6 @@ const actualizarProducto = async (req, res) => {
     const id_vendedor = req.user.id || req.user.id_usuario;
     const body = req.body || {};
 
-    // 1. Verificar existencia y autoría del producto
     const prodExistente = await queryAsync("SELECT id_vendedor, tipo_producto FROM productos WHERE id_producto = ?", [id]);
 
     if (prodExistente.length === 0) {
@@ -184,21 +153,6 @@ const actualizarProducto = async (req, res) => {
 
     const tipo_actual = prodExistente[0].tipo_producto;
 
-    let imagenUrl = null;
-    let certificadoUrl = null;
-
-    if (req.files) {
-      if (req.files.imagen && req.files.imagen[0]) {
-        const resultadoImg = await subirACloudinary(req.files.imagen[0].buffer);
-        imagenUrl = resultadoImg.secure_url;
-      }
-      if (req.files.certificado && req.files.certificado[0]) {
-        const resultadoCert = await subirACloudinary(req.files.certificado[0].buffer);
-        certificadoUrl = resultadoCert.secure_url;
-      }
-    }
-
-    // 2. Construcción dinámica de campos para evitar sobrescribir con UNDEFINED
     const campos = [];
     const params = [];
 
@@ -207,8 +161,8 @@ const actualizarProducto = async (req, res) => {
     if (body.tratamiento !== undefined) { campos.push("tratamiento = ?"); params.push(body.tratamiento); }
     if (body.valor !== undefined) { campos.push("valor = ?"); params.push(body.valor); }
     if (body.stock !== undefined) { campos.push("stock = ?"); params.push(body.stock); }
-    if (imagenUrl) { campos.push("imagen = ?"); params.push(imagenUrl); }
-    if (certificadoUrl) { campos.push("certificado = ?"); params.push(certificadoUrl); }
+    if (body.imagen !== undefined) { campos.push("imagen = ?"); params.push(body.imagen); }
+    if (body.certificado !== undefined) { campos.push("certificado = ?"); params.push(body.certificado); }
 
     await queryAsync("START TRANSACTION");
 
@@ -218,7 +172,6 @@ const actualizarProducto = async (req, res) => {
       await queryAsync(sql, params);
     }
 
-    // 3. Actualizar tabla secundaria joyas si aplica
     if (tipo_actual === "joya") {
       const sqlJoya = `
         UPDATE joyas 
@@ -252,7 +205,6 @@ const eliminarProducto = async (req, res) => {
     const { id } = req.params;
     const id_vendedor = req.user.id || req.user.id_usuario;
 
-    // Validar propiedad
     const prodExistente = await queryAsync("SELECT id_vendedor FROM productos WHERE id_producto = ?", [id]);
 
     if (prodExistente.length === 0) {
