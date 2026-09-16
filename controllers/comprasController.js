@@ -13,7 +13,7 @@ const { emeraldCertificate } = require("../config/blockchain");
  * registra la venta en BD, actualiza el estado del producto y genera traza de historial.
  * 
  * @route POST /api/ventas/comprar
- * @param {Object} req - Objeto de solicitud de Express con los detalles de la transacción en req.body.
+ * @param {Object} req - Objeto de solicitud de Express con los detalles de la transacción en req.bodyd.
  * @param {Object} res - Objeto de respuesta de Express.
  * @returns {JSON} Resultado del procesamiento de la compra y hash de la transacción.
  */
