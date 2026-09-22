@@ -24,7 +24,7 @@ const queryAsync = (sql, params) => {
 // POST /api/pagos/iniciar
 const iniciarPago = async (req, res) => {
   try {
-    const { id_producto, id_vendedor } = req.body;
+    const { id_producto, id_vendedor, redirect_url } = req.body;
     const id_comprador = req.user.id || req.user.id_usuario;
 
     if (!id_producto || !id_vendedor) {
@@ -49,8 +49,13 @@ const iniciarPago = async (req, res) => {
 
     const result = await queryAsync(insertQuery, [referencia, id_producto, id_comprador, id_vendedor, montoCentavos]);
 
+    // 🔥 Cada cliente (mobile/web) puede mandar su propia URL de retorno
+    // (deep link en mobile, URL http normal en web). Si no manda nada,
+    // usamos la variable de entorno como respaldo.
+    const redirectUrl = redirect_url || process.env.WOMPI_REDIRECT_URL;
+
     // Opciones del Web Checkout de Wompi
-    const urlPago = `https://checkout.wompi.co/p/?public-key=${process.env.WOMPI_PUBLIC_KEY}&currency=COP&amount-in-cents=${montoCentavos}&reference=${referencia}&signature:integrity=${firma}&redirect-url=${encodeURIComponent(process.env.WOMPI_REDIRECT_URL)}`;
+    const urlPago = `https://checkout.wompi.co/p/?public-key=${process.env.WOMPI_PUBLIC_KEY}&currency=COP&amount-in-cents=${montoCentavos}&reference=${referencia}&signature:integrity=${firma}&redirect-url=${encodeURIComponent(redirectUrl)}`;
 
     res.json({
       transaccionId: result.insertId,
